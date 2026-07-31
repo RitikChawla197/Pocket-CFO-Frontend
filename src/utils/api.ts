@@ -1,4 +1,5 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
+const BASE_URL = rawBaseUrl.replace(/\/+$/, '');
 
 export const API_ENDPOINTS = {
   health: `${BASE_URL}/api/health`,
@@ -8,3 +9,4 @@ export const API_ENDPOINTS = {
   saveUserData: `${BASE_URL}/api/user/data`,
   aiInsights: `${BASE_URL}/api/ai/insights`,
 };
+
