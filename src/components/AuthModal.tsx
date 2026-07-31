@@ -4,6 +4,8 @@ import { toast } from 'sonner';
 import type { FinancialState } from '../types/financial';
 import { INITIAL_DATA, EMPTY_STATE } from '../utils/storage';
 
+import { API_ENDPOINTS } from '../utils/api';
+
 export interface UserSession {
   id: number;
   name: string;
@@ -34,7 +36,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
     setLoading(true);
     try {
-      const endpoint = mode === 'register' ? '/api/auth/register' : '/api/auth/login';
+      const endpoint = mode === 'register' ? API_ENDPOINTS.register : API_ENDPOINTS.login;
       const body = mode === 'register' ? { name, email, password } : { email, password };
 
       const response = await fetch(endpoint, {

@@ -11,6 +11,7 @@ import { DataDrawer } from './components/DataDrawer';
 import { Footer } from './components/Footer';
 import { LandingPage } from './components/LandingPage';
 import { AuthModal, type UserSession } from './components/AuthModal';
+import { API_ENDPOINTS } from './utils/api';
 
 import type { FinancialItem, MonthlySnapshot, AICFOInsight, FinancialState } from './types/financial';
 import { calculateMetrics, detectRedFlags } from './utils/calculations';
@@ -57,7 +58,7 @@ export function App() {
     saveFinancialState(financialState);
 
     if (userSession && userSession.id && userSession.id !== 999) {
-      fetch('/api/user/data', {
+      fetch(API_ENDPOINTS.saveUserData, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

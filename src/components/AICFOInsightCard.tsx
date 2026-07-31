@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Bot, Sparkles, RefreshCw, CheckCircle2, Key, Eye, EyeOff, X, Zap, SlidersHorizontal } from 'lucide-react';
 import type { AICFOInsight, FinancialMetrics, FinancialItem, MonthlySnapshot, VerdictState } from '../types/financial';
 import { toast } from 'sonner';
+import { API_ENDPOINTS } from '../utils/api';
 
 interface AICFOInsightCardProps {
   metrics: FinancialMetrics;
@@ -95,7 +96,7 @@ export const AICFOInsightCard: React.FC<AICFOInsightCardProps> = ({
         api_key: activeKey || undefined,
       };
 
-      const response = await fetch('/api/ai/insights', {
+      const response = await fetch(API_ENDPOINTS.aiInsights, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
