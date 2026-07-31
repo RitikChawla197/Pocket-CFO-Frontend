@@ -59,11 +59,22 @@ export interface AICFOInsight {
   lastUpdated?: string;
 }
 
+export interface FinancialGoal {
+  id: string;
+  title: string;
+  targetAmount: number;
+  currentAmount: number;
+  targetYear: number;
+  category: 'Emergency' | 'House' | 'Car' | 'Vacation' | 'Retirement' | 'Other';
+}
+
 export interface FinancialState {
   incomeItems: FinancialItem[];
   expenseItems: FinancialItem[];
   assetItems: FinancialItem[];
   liabilityItems: FinancialItem[];
   snapshots: MonthlySnapshot[];
+  goals?: FinancialGoal[];
   aiInsight?: AICFOInsight | null;
 }
+

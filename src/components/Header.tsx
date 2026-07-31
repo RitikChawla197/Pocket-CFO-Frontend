@@ -1,5 +1,5 @@
 import React from 'react';
-import { Landmark, Camera, RotateCcw, ArrowUpRight, ArrowDownLeft, ShieldCheck, CreditCard, LogOut, Home, User, Sparkles } from 'lucide-react';
+import { Landmark, Camera, RotateCcw, ArrowUpRight, ArrowDownLeft, ShieldCheck, CreditCard, LogOut, Home, User, Sparkles, Printer } from 'lucide-react';
 import type { FinancialMetrics } from '../types/financial';
 import { formatCompactINR } from '../utils/formatters';
 import type { UserSession } from './AuthModal';
@@ -127,6 +127,15 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Camera className="w-3.5 h-3.5" /> Save Snapshot
           </button>
+
+          <button
+            onClick={() => window.print()}
+            className="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+            title="Print or Save Financial Report as PDF"
+          >
+            <Printer className="w-3.5 h-3.5 text-stone-600" /> PDF Report
+          </button>
+
 
           <button
             onClick={onGoLanding}

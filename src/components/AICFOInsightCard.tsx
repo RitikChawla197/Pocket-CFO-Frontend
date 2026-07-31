@@ -29,38 +29,49 @@ export const AICFOInsightCard: React.FC<AICFOInsightCardProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Key & Provider State from SessionStorage (auto-clears on tab close or logout)
-  const [provider, setProvider] = useState<'gemini' | 'anthropic'>(
-    () => (sessionStorage.getItem('cfo_ai_provider') as 'gemini' | 'anthropic') || 'gemini'
+  type ProviderType = 'groq' | 'gemini' | 'anthropic' | 'openrouter' | 'offline';
+
+  const [provider, setProvider] = useState<ProviderType>(
+    () => (sessionStorage.getItem('cfo_ai_provider') as ProviderType) || 'groq'
   );
   const [apiKey, setApiKey] = useState<string>(
     () => sessionStorage.getItem('cfo_ai_key') || ''
   );
   const [showKey, setShowKey] = useState(false);
 
-  const handleSaveConfig = (newProvider: 'gemini' | 'anthropic', newKey: string) => {
+  const handleSaveConfig = (newProvider: ProviderType, newKey: string) => {
     setProvider(newProvider);
     setApiKey(newKey);
     sessionStorage.setItem('cfo_ai_provider', newProvider);
     if (newKey.trim()) {
       sessionStorage.setItem('cfo_ai_key', newKey.trim());
-      toast.success(`Saved ${newProvider === 'anthropic' ? 'Anthropic Claude' : 'Google Gemini'} API Key!`, {
+      toast.success(`Configured ${newProvider.toUpperCase()} Provider!`, {
         description: 'Active for this session. Will auto-clear when tab is closed or on logout.',
       });
     } else {
       sessionStorage.removeItem('cfo_ai_key');
       localStorage.removeItem('cfo_ai_key');
-      toast.info('API Key Cleared', {
-        description: 'Session key removed.',
-      });
+      if (newProvider !== 'offline') {
+        toast.info('API Key Cleared', {
+          description: 'Session key removed.',
+        });
+      } else {
+        toast.success('Switched to Offline CFO Engine', {
+          description: 'Runs financial diagnostics locally without external API calls.',
+        });
+      }
     }
     setIsModalOpen(false);
   };
 
   const handleGenerateAIInsights = async () => {
     const activeKey = apiKey.trim() || sessionStorage.getItem('cfo_ai_key') || '';
-    if (!activeKey) {
-      toast.info('API Key Required', {
-        description: 'Please configure your Google Gemini or Anthropic Claude API Key to run live AI diagnostics.',
+    const activeProvider = provider || (sessionStorage.getItem('cfo_ai_provider') as ProviderType) || 'groq';
+
+    if (!activeKey && activeProvider !== 'offline') {
+      // If no key provided, open settings or fallback to offline
+      toast.info('Select AI Provider or Enter Key', {
+        description: 'You can use Groq (Free), OpenRouter (Free), or the Offline Rule Engine without a key.',
       });
       setIsModalOpen(true);
       return;
@@ -68,8 +79,6 @@ export const AICFOInsightCard: React.FC<AICFOInsightCardProps> = ({
 
     setLoading(true);
     try {
-      const activeProvider = provider || (sessionStorage.getItem('cfo_ai_provider') as 'gemini' | 'anthropic') || 'gemini';
-
       const payload = {
         net_worth: metrics.netWorth,
         monthly_income: metrics.totalIncome,
@@ -118,42 +127,39 @@ export const AICFOInsightCard: React.FC<AICFOInsightCardProps> = ({
 
       onUpdateInsight(updated);
 
-      const providerLabel = activeKey
-        ? activeProvider === 'anthropic' ? 'Anthropic Claude' : 'Google Gemini'
-        : 'Smart CFO AI Engine';
+      const providerLabels: Record<string, string> = {
+        groq: 'Groq (Llama 3.3 70B)',
+        openrouter: 'OpenRouter Free Model',
+        gemini: 'Google Gemini 2.5 Flash',
+        anthropic: 'Anthropic Claude 3.5 Sonnet',
+        offline: 'Offline Local CFO Engine',
+      };
 
-      toast.success(`AI CFO Diagnosis Generated!`, {
-        description: `Powered by ${providerLabel}`,
+      toast.success(`CFO Diagnosis Generated!`, {
+        description: `Powered by ${providerLabels[activeProvider] || 'Personal CFO AI'}`,
       });
     } catch (err: any) {
       console.error('Failed to generate AI insights:', err);
-      const activeKey = apiKey.trim() || localStorage.getItem('cfo_ai_key') || '';
-      
-      if (activeKey) {
-        toast.error('AI Insight Generation Failed', {
-          description: err?.message || 'Check your API Key or Network connection.',
-        });
-      } else {
-        const fallbackVerdict: VerdictState = metrics.verdict;
-        const fallbackInsight: AICFOInsight = {
-          verdict: fallbackVerdict,
-          summary: `Bhai, monthly income ₹${(metrics.totalIncome/1000).toFixed(1)}k solid hai, lekin ${metrics.burnRate.toFixed(1)}% burn rate ki wajah se net worth fast scale nahi ho rhi. Current runway ${metrics.emergencyRunwayMonths.toFixed(1)} months hai.`,
-          recommendations: [
-            `Lifestyle spending ko immediately 20% cut down karke SIP investments boost karo.`,
-            `High interest credit card debts ko immediately clear karo to fix DTI (${metrics.dtiRatio.toFixed(1)}%).`,
-            `Emergency cash reserve ko baseline 6 months essential expenses tak badhao.`
-          ],
-          lastUpdated: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-        };
-        onUpdateInsight(fallbackInsight);
-        toast.info('Generated local AI Diagnosis', {
-          description: 'Using offline CFO engine.',
-        });
-      }
+      const fallbackVerdict: VerdictState = metrics.verdict;
+      const fallbackInsight: AICFOInsight = {
+        verdict: fallbackVerdict,
+        summary: `Bhai, monthly income ₹${(metrics.totalIncome/1000).toFixed(1)}k solid hai, lekin ${metrics.burnRate.toFixed(1)}% burn rate ki wajah se net worth fast scale nahi ho rhi. Current runway ${metrics.emergencyRunwayMonths.toFixed(1)} months hai.`,
+        recommendations: [
+          `Lifestyle spending ko immediately 20% cut down karke SIP investments boost karo.`,
+          `High interest credit card debts ko immediately clear karo to fix DTI (${metrics.dtiRatio.toFixed(1)}%).`,
+          `Emergency cash reserve ko baseline 6 months essential expenses tak badhao.`
+        ],
+        lastUpdated: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+      };
+      onUpdateInsight(fallbackInsight);
+      toast.info('Switched to Local CFO Engine', {
+        description: 'Using offline rule-based CFO diagnosis.',
+      });
     } finally {
       setLoading(false);
     }
   };
+
 
   const getVerdictStyle = (v?: VerdictState) => {
     switch (v) {
@@ -341,9 +347,10 @@ export const AICFOInsightCard: React.FC<AICFOInsightCardProps> = ({
             </div>
 
             {/* BYOK Policy Note */}
+            {/* BYOK Policy Note */}
             <div className="p-3 bg-emerald-950/60 rounded-xl border border-emerald-800/60 text-[11px] text-emerald-200/80 flex items-start gap-2">
               <Zap className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-              <span><strong>Bring Your Own Key (BYOK):</strong> Every user provides their own Google Gemini or Anthropic Claude API key. Keys stay private in your browser.</span>
+              <span><strong>Free AI Options Available:</strong> Get a 100% free API key from <strong>Groq</strong> or <strong>OpenRouter</strong>, or use the <strong>Offline CFO Engine</strong> with zero keys!</span>
             </div>
 
             {/* Provider Selection Tabs */}
@@ -351,11 +358,43 @@ export const AICFOInsightCard: React.FC<AICFOInsightCardProps> = ({
               <label className="text-xs font-semibold text-emerald-300 uppercase tracking-wider block">
                 Select AI Provider
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setProvider('groq')}
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between space-y-1 ${
+                    provider === 'groq'
+                      ? 'bg-emerald-500/20 border-emerald-400 text-white shadow-sm'
+                      : 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300/70 hover:bg-emerald-900/40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold font-display">Groq Cloud</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/30 text-emerald-300 font-mono font-bold">100% FREE</span>
+                  </div>
+                  <span className="text-[10px] text-stone-300/80">Ultra-fast Llama 3.3 70B model</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setProvider('openrouter')}
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between space-y-1 ${
+                    provider === 'openrouter'
+                      ? 'bg-blue-500/20 border-blue-400 text-white shadow-sm'
+                      : 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300/70 hover:bg-emerald-900/40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold font-display">OpenRouter</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/30 text-blue-300 font-mono font-bold">FREE MODELS</span>
+                  </div>
+                  <span className="text-[10px] text-stone-300/80">Llama & Gemma free models</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setProvider('gemini')}
-                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between space-y-1 ${
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between space-y-1 ${
                     provider === 'gemini'
                       ? 'bg-emerald-500/20 border-emerald-400 text-white shadow-sm'
                       : 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300/70 hover:bg-emerald-900/40'
@@ -363,15 +402,15 @@ export const AICFOInsightCard: React.FC<AICFOInsightCardProps> = ({
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold font-display">Google Gemini</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/30 text-emerald-300 font-mono">2.5 Flash</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/30 text-emerald-300 font-mono">2.5 Flash</span>
                   </div>
-                  <span className="text-[11px] text-stone-300/80">Fast & intelligent Indian financial coaching</span>
+                  <span className="text-[10px] text-stone-300/80">Official Google AI Studio</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setProvider('anthropic')}
-                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between space-y-1 ${
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between space-y-1 ${
                     provider === 'anthropic'
                       ? 'bg-purple-500/20 border-purple-400 text-white shadow-sm'
                       : 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300/70 hover:bg-emerald-900/40'
@@ -379,53 +418,88 @@ export const AICFOInsightCard: React.FC<AICFOInsightCardProps> = ({
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold font-display">Anthropic Claude</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-300 font-mono">3.5 Sonnet</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-300 font-mono">3.5 Sonnet</span>
                   </div>
-                  <span className="text-[11px] text-stone-300/80">Deep analytical reasoning & precise action plans</span>
-                </button>
-              </div>
-            </div>
-
-            {/* API Key Input */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-emerald-300 uppercase tracking-wider block">
-                  {provider === 'anthropic' ? 'Anthropic API Key' : 'Google Gemini API Key'}
-                </label>
-                <span className="text-[10px] text-emerald-400/80">
-                  {provider === 'anthropic' ? 'Starts with sk-ant-' : 'Starts with AIza'}
-                </span>
-              </div>
-
-              <div className="relative">
-                <input
-                  type={showKey ? 'text' : 'password'}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={provider === 'anthropic' ? 'sk-ant-api03-...' : 'AIzaSy...'}
-                  className="w-full bg-emerald-950/80 border border-emerald-700/60 rounded-xl px-3.5 py-2.5 pr-10 text-sm text-stone-100 placeholder-emerald-700/60 focus:outline-none focus:border-emerald-400 font-mono transition-colors"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowKey(!showKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-400/70 hover:text-emerald-300 cursor-pointer p-1"
-                >
-                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  <span className="text-[10px] text-stone-300/80">Deep reasoning & analysis</span>
                 </button>
               </div>
 
-              <p className="text-[11px] text-emerald-200/60 leading-normal">
-                {provider === 'anthropic' ? (
-                  <span>
-                    Get key from <a href="https://console.anthropic.com/" target="_blank" rel="noreferrer" className="underline text-emerald-300 hover:text-white">Anthropic Console</a>.
-                  </span>
-                ) : (
-                  <span>
-                    Get free key from <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" className="underline text-emerald-300 hover:text-white">Google AI Studio</a>.
-                  </span>
-                )}
-              </p>
+              {/* Offline Engine Choice */}
+              <button
+                type="button"
+                onClick={() => {
+                  setProvider('offline');
+                  setApiKey('');
+                }}
+                className={`w-full p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
+                  provider === 'offline'
+                    ? 'bg-amber-500/20 border-amber-400 text-white shadow-sm'
+                    : 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300/70 hover:bg-emerald-900/40'
+                }`}
+              >
+                <div>
+                  <div className="text-xs font-bold font-display text-amber-300">Offline Local CFO Engine</div>
+                  <div className="text-[10px] text-stone-300/80">No API key required — instant local rule-based Hinglish diagnosis</div>
+                </div>
+                <span className="text-[9px] px-2 py-0.5 rounded bg-amber-500/30 text-amber-200 font-bold font-mono">NO KEY NEEDED</span>
+              </button>
             </div>
+
+            {/* API Key Input (Hidden for Offline) */}
+            {provider !== 'offline' && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-emerald-300 uppercase tracking-wider block">
+                    {provider === 'groq' ? 'Groq API Key' : provider === 'openrouter' ? 'OpenRouter API Key' : provider === 'anthropic' ? 'Anthropic API Key' : 'Google Gemini API Key'}
+                  </label>
+                  <span className="text-[10px] text-emerald-400/80">
+                    {provider === 'groq' ? 'Starts with gsk_' : provider === 'openrouter' ? 'Starts with sk-or-' : provider === 'anthropic' ? 'Starts with sk-ant-' : 'Starts with AIza'}
+                  </span>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type={showKey ? 'text' : 'password'}
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder={
+                      provider === 'groq' ? 'gsk_...' :
+                      provider === 'openrouter' ? 'sk-or-v1-...' :
+                      provider === 'anthropic' ? 'sk-ant-api03-...' : 'AIzaSy...'
+                    }
+                    className="w-full bg-emerald-950/80 border border-emerald-700/60 rounded-xl px-3.5 py-2.5 pr-10 text-sm text-stone-100 placeholder-emerald-700/60 focus:outline-none focus:border-emerald-400 font-mono transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowKey(!showKey)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-400/70 hover:text-emerald-300 cursor-pointer p-1"
+                  >
+                    {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-emerald-200/60 leading-normal">
+                  {provider === 'groq' ? (
+                    <span>
+                      Get 100% Free key from <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="underline text-emerald-300 font-bold hover:text-white">console.groq.com</a> (No credit card needed).
+                    </span>
+                  ) : provider === 'openrouter' ? (
+                    <span>
+                      Get free key from <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" className="underline text-emerald-300 font-bold hover:text-white">openrouter.ai</a>.
+                    </span>
+                  ) : provider === 'anthropic' ? (
+                    <span>
+                      Get key from <a href="https://console.anthropic.com/" target="_blank" rel="noreferrer" className="underline text-emerald-300 hover:text-white">Anthropic Console</a>.
+                    </span>
+                  ) : (
+                    <span>
+                      Get key from <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" className="underline text-emerald-300 hover:text-white">Google AI Studio</a>.
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
+
 
             {/* Save & Clear Actions */}
             <div className="pt-2 flex items-center justify-between gap-3">

@@ -3,6 +3,7 @@ import { Toaster, toast } from 'sonner';
 import { Header } from './components/Header';
 import { HeroRow } from './components/HeroRow';
 import { AICFOInsightCard } from './components/AICFOInsightCard';
+import { FinancialSimulators } from './components/FinancialSimulators';
 import { KpiBento } from './components/KpiBento';
 import { ChartsRow } from './components/ChartsRow';
 import { CashFlowRow } from './components/CashFlowRow';
@@ -239,6 +240,12 @@ export function App() {
           snapshots={snapshots}
           currentInsight={aiInsight}
           onUpdateInsight={handleUpdateInsight}
+        />
+
+        <FinancialSimulators
+          metrics={metrics}
+          liabilityItems={liabilityItems}
+          assetItems={assetItems}
         />
 
         <KpiBento metrics={metrics} />
